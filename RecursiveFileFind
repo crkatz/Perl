@@ -1,0 +1,150 @@
+############################################################################################
+#This program recursively find the files, directories, sub directories under a given path.
+# Replaces a specified portion of a string in a path with a new string
+#Date: April 7th, 2014
+############################################################################################
+
+#!usr/bin/perl 
+use strict;
+use warnings;
+use Cwd;
+
+my $myPath = "releaseFolderPath";
+
+print "Enter the current release folder name: \n";
+my $currentRel = <STDIN>;
+print "Enter the future release folder name: \n";
+my $futureRel = <STDIN>;
+
+print "The current release is: **$currentRel** \n";
+print "The future release is: **$futureRel** \n";
+
+chomp($currentRel, $futureRel); #Eliminate the new line character
+my $path = $myPath.$futureRel.'\\'."LR_Scripts";
+chdir $path; #Change Directory path
+$path = getcwd(); # Get current working directory
+
+print "The path is: $path \n";
+
+
+my $fpath;
+
+#Subroutine to list files, directories and sub-directories under a given path
+sub read_files
+{
+	
+	opendir (my $dir, $path) or die "Cannot open directory: $!";
+	my @files = readdir $dir;
+	@files = map{$path .'\\'.$_} @files;
+	closedir $dir;
+	
+	foreach(@files)
+	{
+		if (-f $_ )
+		{
+			
+			print "\n This element is a file $_\n";
+			
+		}
+		if(-d $_ and ($_ ne join '\\' , $path, '.'  and $_ ne join '\\' , $path, '..' ))
+		{
+			print "\n************************************";
+			print "\n This element is a directory $_\n";
+			print "\n************************************";
+			$path  = $_;
+			read_files();
+		}
+	}
+			
+}
+
+#read_files();
+
+################################################################################################
+
+# Program to search file by specific file extension. And then search a specific text and replace
+
+search_replace();
+
+sub search_replace
+{
+	print $path;
+	
+	opendir (my $dir, $path) or die "Cannot open directory: $!";
+	my @files = readdir $dir;
+	@files = map{$path .'/'.$_} @files;
+	closedir $dir;
+	
+	foreach(@files)
+	{
+		#next if($_ =~ m/^\./);
+		if (-f $_ and $_ !~ /script.hange*/) 
+		{
+			 if(/.c$/ or /.prm$/ or /.h$/) #Filters by the file extension ending in .c. $ represents the search string at #the end of the line
+			 {
+				print "\n File:  $_\n";
+				$fpath = $_;
+				replace($fpath);
+			 }
+			
+		}
+		print "Check Point: $_ \n";
+		# Check if directory, ignore .. directories, data and results folders in the scripts
+		#if(-d $_ and $_ !~ /\/.$/ and $_ !~ /\/..$/ and $_ !~ /data$/ and $_ !~ /result*/)
+		if(-d $_ and $_ !~ /\/.$/ and $_ !~ /\/..$/)
+		{
+			
+				#print "\n************************************";
+				print "\n Directory:  $_\n";
+				#print "\n************************************";
+				$path  = $_;
+				search_replace();
+			
+		}
+	}
+			
+}
+
+sub replace
+{
+	
+	open readFILE, "<", $fpath or die "Cannot open file:'$fpath' $!";
+	open writeFILE, ">", $fpath. ".tmp" or die "Cannot open file:'$fpath' $!";
+	
+	my @readLines = <readFILE>;
+	#print "@newLines\n";
+	foreach my $line(@readLines)
+	{
+		
+			$line =~ s/$myPath.$currentRel/$myPath.$futureRel/g;
+			#print $line =~ s/$currentRel/$futureRel/gi;
+		
+			print writeFILE $line;
+
+			
+						
+		
+	}
+	
+	close(readFILE);
+	close(writeFILE);
+	rename $fpath. ".tmp", $fpath
+	
+	
+}
+
+
+#Delete Data and Result folders in the scripts. 
+#Ignore Parameters and Results folders under the release folder. 
+
+# zip release folders
+# Delete log files from the release folders and .idx files from script folders
+
+
+
+
+
+
+
+
+
