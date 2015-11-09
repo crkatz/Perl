@@ -1,0 +1,104 @@
+#!usr/bin/perl -w
+
+use strict;
+use Sys::Hostname;
+use Time::Local;
+use POSIX;
+
+#Hostname && Instance Variables
+my $PID;
+my $name,
+my $dumpId;
+my $domain = substr hostname, 0, index(hostname, '.');
+
+#grep the PID list and output to a file
+my $ps = qx/ps -ef | grep "weblogic.Name" | awk '{print \$2, \$9}' > "pid_list.txt"/;
+
+
+open (FILE, 'pid_list.txt') or die("Unable to open file");
+print "\nThe LIST of the WEBLOGIC instances and their PID on $domain:\n\n";
+
+#hashing the file to print the PID's clearly
+my %hash; while (<FILE>) {
+			chomp;    
+			($PID, $name) = split (" ", $_);    
+			$hash{$PID} .= exists $hash{$PID} ? "$name" : $name; 
+			print "$PID => $hash{$PID}\n"; } 
+		close (FILE);
+	
+	print "\nEnter the PID:";
+	$PID=<>;
+	$PID=substr $PID, 0, index($PID, '\n');
+	$name = substr $hash{$PID}, 16;
+	
+	print "Enter the duration of the recording in SECS:";
+	my $duration =<>;
+#	print "The test duration is:$duration\n";
+	my $finalDuration = join '', (substr $duration, 0, index($duration, '\n')), 's';
+#	print "Duration:$finalDuration\n";
+
+
+#Path
+my $newWorkDir = qx/echo \$JAVA_HOME/;
+print "\nJava Home::$newWorkDir\n";
+  # chdir $newWorkDir; 
+    my $dir = getcwd();
+   $newWorkDir = join '/', (substr $newWorkDir, 0, index($newWorkDir, '\n')), 'bin';
+  # $newWorkDir = join '/', $newWorkDir, 'bin';
+
+chdir $newWorkDir; $dir = getcwd();
+print "\nCURRENT WORKING DIRECTORY::$dir\n";
+
+
+my $wldf = qx{./jrcmd $PID check_flightrecording | awk '/compress=false/ {print \$4}'};
+	my $length = -2;
+	$wldf = substr $wldf, 6, $length;
+	#index($wldf, 'WLDF');
+	print "$wldf\n\n";
+
+	
+my $time = scalar (localtime(time));
+print "CURRENT TIME::$time\n\n";
+
+	my $mon = substr $time, 4, index($time, ' ');
+	my $year = substr $time, -4, 4;
+	my $mday = substr $time, -16, 2;  
+	my $hour = substr $time, -13, 2; 
+	my $min = substr $time, -10, 2; 
+	my $date = join '' , $mday, $mon, $year;
+	my $testtime;
+	
+ if ($hour ge 13 && $hour lt 24)
+ {
+    $testtime = join '' , $hour, $min, 'PM';
+ }
+ else
+ {
+	$testtime = join '' , $hour, $min, 'AM';
+ }
+
+ 
+my $totdumpTraces = ceil($duration/300);
+print "$totdumpTraces DUMP TRACES will be collected\n\n";	
+
+my $pFile = "$domain-$name-$date-$testtime.jfr";
+
+#Start Flightrecording
+my $parentTrace = join '', './jrcmd', ' ', $PID, ' ', 'start_flightrecording', ' ', 'filename=', $pFile, ' ', 'duration=', $finalDuration, ' ', 'compress=true'; 
+print "$parentTrace\n\n";
+system("$parentTrace");
+
+for(my $dumpId = 1; $dumpId <= $totdumpTraces; $dumpId++)
+{
+	my $dFile = "/JFRrecordings/$domain-$name-$date-$testtime\_Dump$dumpId.jfr";
+	
+	#Dump Flight Recording for every 5mins
+	my $dumpTrace = join '', './jrcmd', ' ', $PID, ' ', 'dump_flightrecording', ' ', 'name="', $wldf, '"', ' ', 'recording=1', ' ', 'copy_to_file="', $dFile, '"', ' ', 'compress_copy=true'; 
+	print "$dumpTrace\n\n";
+	system("$dumpTrace");
+	sleep (300); 
+}
+
+
+
+
