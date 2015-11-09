@@ -1,0 +1,47 @@
+#######################################################################################################
+#This program recursively copies files, directories, sub directories under a given path to a new path.
+#Excludes files and Folders mentioned in the ExcludedList.txt
+#Date: April 15th, 2014
+#######################################################################################################
+
+
+#!usr/bin/perl -w
+
+use strict;
+use Cwd;
+
+my $path = "folderPath";
+chdir $path;
+
+print "Enter the current release folder name: \n";
+my $currentRel = <STDIN>;
+print "Enter the future release folder name: \n";
+my $futureRel = <STDIN>;
+
+
+chomp($currentRel, $futureRel); #Eliminate the new line character
+
+copy_files();
+
+sub copy_files
+{
+	if (-e $futureRel)
+	{
+		print "The future release is: $path$futureRel \n";
+	}
+	else
+	{
+		mkdir $futureRel or die "Could not mkdir testDir: $!";
+	}
+	
+	print "The current release is: $path$currentRel \n";
+	print "The future release is: $path$futureRel \n";
+
+
+
+	system qw(xcopy /E /EXCLUDE:C:\\ExcludedList.txt), $path.$currentRel, $path.$futureRel;
+	
+	
+}
+
+
