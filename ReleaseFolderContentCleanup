@@ -1,0 +1,50 @@
+#********************************************************
+# Date:   10 Oct, 2013
+# Purpose: Cleanp Up the Release folder to free up some space
+#********************************************************
+
+#!usr/bin/perl -w
+
+use strict; 
+
+use File::Find::Rule;
+use Cwd;
+
+my $newWorkDir = "relaseFolderPath";
+chdir $newWorkDir;
+my $dir = getcwd();
+print "Current working directory is: $dir\n";
+
+opendir(DIR, $dir) or die $!;
+my $filelist;
+my @deleteList;
+
+#sub buildFileIndex {
+
+my $includeDirs = File::Find::Rule->directory
+								  -> name('data', 'result*');
+								 								  
+print "$includeDirs\n";
+
+my $includeFiles = File::Find::Rule-> file
+									->name('*.idx', '*.bak');
+
+my @deleteList = File::Find::Rule-> or($includeDirs, $includeFiles)
+									->in($dir);
+
+my @newList = map {"$_\n"} @deleteList;
+
+foreach my $line (@newList){
+	print "$line\n";
+   chomp($line);
+   #unlink($line) or warn "Could not unlink $line: $!";
+   #exec("del $line");
+   system "rm -rf $line";
+}
+									
+#print $newList[$_] foreach 0 .. $#newList;
+#print $filelist map{"$_\n"} @deleteList;
+
+unlink(@newList);
+
+#}
